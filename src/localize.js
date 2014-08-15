@@ -19,6 +19,10 @@ angular.module('localization', [])
 
         var provider = this;
 
+        this.setProviderLanguages = function( languages ) {
+            this.languages = languages;
+        };
+
         this.$get = ['$http', '$rootScope', '$window', '$filter', function ($http, $rootScope, $window, $filter) {
 
             var localize = {
