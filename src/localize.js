@@ -12,14 +12,20 @@ angular.module('localization', [])
     // localization service responsible for retrieving resource files from the server and
     // managing the translation dictionary
     .provider('localize', function localizeProvider() {
-        
+
         this.languages = ['en_US'];
         this.defaultLanguage = 'en_US';
         this.ext = 'js';
+        this.useHttp = true;
+
+        // set flag to use local resource instead of http
+        this.useLocalResource = function(toggle) {
+          this.useHttp = toggle === false
+        };
 
         var provider = this;
 
-        this.$get = ['$http', '$rootScope', '$window', '$filter', function ($http, $rootScope, $window, $filter) {
+        this.$get = ['$http', '$rootScope', '$window', '$filter', '$injector', function ($http, $rootScope, $window, $filter, $injector) {
 
             var localize = {
                 // use the $window service to get the language of the user's browser
@@ -32,7 +38,7 @@ angular.module('localization', [])
                 resourceFileLoaded:false,
 
                 // success handler for all server communication
-                successCallback:function (data) {
+                setDictionaryData:function (data) {
                     // store the returned array in the dictionary
                     localize.dictionary = data;
                     // set the flag that the resource are loaded
@@ -73,31 +79,45 @@ angular.module('localization', [])
                 // builds the url for locating the resource file
                 buildUrl: function() {
                     if(!localize.language){
-                        var lang, androidLang;
-                        // works for earlier version of Android (2.3.x)
-                        if ($window.navigator && $window.navigator.userAgent && (androidLang = $window.navigator.userAgent.match(/android.*\W(\w\w)-(\w\w)\W/i))) {
-                            lang = androidLang[1];
-                        } else {
-                            // works for iOS, Android 4.x and other devices
-                            lang = $window.navigator.userLanguage || $window.navigator.language;
-                        }
-                        // set language
-                        localize.language = this.fallbackLanguage(lang);
+                      localize.determineLanguage();
                     }
                     return 'i18n/resources-locale_' + localize.language + '.' + provider.ext;
                 },
 
+                determineLanguage: function() {
+                  var lang, androidLang;
+                  // works for earlier version of Android (2.3.x)
+                  if ($window.navigator && $window.navigator.userAgent && (androidLang = $window.navigator.userAgent.match(/android.*\W(\w\w)-(\w\w)\W/i))) {
+                      lang = androidLang[1];
+                  } else {
+                      // works for iOS, Android 4.x and other devices
+                      lang = $window.navigator.userLanguage || $window.navigator.language;
+                  }
+                  // set language
+                  localize.language = this.fallbackLanguage(lang);
+                },
+
                 // loads the language resource file from the server
                 initLocalizedResources:function () {
+
+                  if(provider.useHttp) {
                     // build the url to retrieve the localized resource file
                     var url = localize.url || localize.buildUrl();
                     // request the resource file
-                    $http({ method:"GET", url:url, cache:false }).success(localize.successCallback).error(function () {
-                        // the request failed set the url to the default resource file
-                        var url = 'i18n/resources-locale_default' + '.' + provider.ext;
-                        // request the default resource file
-                        $http({ method:"GET", url:url, cache:false }).success(localize.successCallback);
+                    $http({ method:"GET", url:url, cache:false }).success(localize.setDictionaryData).error(function () {
+                      // the request failed set the url to the default resource file
+                      var url = 'i18n/resources-locale_default' + '.' + provider.ext;
+                      // request the default resource file
+                      $http({ method:"GET", url:url, cache:false }).success(localize.setDictionaryData);
                     });
+
+                  } else {
+                    var data = $injector.get('LocaleDictionary');
+                    if(!localize.language){
+                      localize.determineLanguage();
+                    }
+                    localize.setDictionaryData(data[localize.language]);
+                  }
                 },
 
                 // checks the dictionary for a localized resource string
@@ -123,7 +143,8 @@ angular.module('localization', [])
 
                 setProviderLanguages: function( languages ) {
                     provider.languages = languages;
-                }
+                },
+
             };
 
             // force the load of the resource file
