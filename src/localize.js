@@ -104,11 +104,11 @@ angular.module('localization', [])
                     // build the url to retrieve the localized resource file
                     var url = localize.url || localize.buildUrl();
                     // request the resource file
-                    $http({ method:"GET", url:url, cache:false }).success(localize.setDictionaryData).error(function () {
+                    $http({ method:"GET", url:url, cache:false }).then(localize.setDictionaryData, function () {
                       // the request failed set the url to the default resource file
                       var url = 'i18n/resources-locale_default' + '.' + provider.ext;
                       // request the default resource file
-                      $http({ method:"GET", url:url, cache:false }).success(localize.setDictionaryData);
+                      $http({ method:"GET", url:url, cache:false }).then(localize.setDictionaryData);
                     });
 
                   } else {
