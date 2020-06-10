@@ -40,7 +40,7 @@ angular.module('localization', [])
                 // success handler for all server communication
                 setDictionaryData:function (data) {
                     // store the returned array in the dictionary
-                    localize.dictionary = data;
+                    localize.dictionary = data && data.data;
                     // set the flag that the resource are loaded
                     localize.resourceFileLoaded = true;
                     // broadcast that the file has been loaded
